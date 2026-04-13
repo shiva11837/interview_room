@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Room</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Main Interview Room -->
+    <div id="interviewRoom" class="interview-room">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fas fa-robot"></i>
+                    <span>AI INTERVIEW ROOM</span>
+                </div>
+            </div>
+            
+            <div class="room-info">
+                <label>Room Code</label>
+                <div class="room-code">
+                    <input type="text" value="TECH2026" readonly>
+                    <button class="copy-btn" title="Copy code">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="device-controls">
+                <button class="device-btn active" id="cameraBtn" title="Camera">
+                    <i class="fas fa-video"></i>
+                </button>
+                <button class="device-btn active" id="micBtn" title="Microphone">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="device-btn" id="speakerBtn" title="Speaker">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="powered-by">
+                    <span>Powered by</span>
+                    <strong>AI</strong>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="interview-header">
+                <div class="company-info">
+                    <div class="company-logo">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="company-details">
+                        <h1>Tech Mahindra</h1>
+                        <span class="role">DevOps Engineer</span>
+                    </div>
+                </div>
+                <div class="header-right"><button class="theme-toggle" id="themeToggle"><span class="toggle-icon" id="toggleIcon">☀️</span><span class="toggle-label" id="toggleLabel">Light Mode</span></button><div class="header-timer">
+                    <i class="fas fa-clock"></i>
+                    <span id="timer">45:00</span>
+                </div>
+            </header>
+            
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="video-placeholder">
+                    <video id="candidateVideo" autoplay muted playsinline></video>
+                    <div class="video-overlay" id="videoOverlay">
+                        <div class="recording-status">
+                            <i class="fas fa-record-vinyl"></i>
+                            <span>Recording</span>
+                        </div>
+                    </div>
+                    <div class="self-view">
+                        <video id="selfVideo" autoplay muted playsinline></video>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Questions Panel -->
+            <div class="questions-panel">
+                <div class="questions-header">
+                    <div class="question-progress">
+                        <span class="current-q">Q<span id="currentQNum">1</span></span>
+                        <span class="total-q">of <span id="totalQNum">10</span></span>
+                    </div>
+                    <button class="questions-list-btn">
+                        <i class="fas fa-list"></i>
+                        Questions
+                    </button>
+                </div>
+                
+                <div class="question-content">
+                    <h2 id="questionText">Tell us about your experience with CI/CD pipelines and automation tools.</h2>
+                </div>
+                
+                <div class="response-section">
+                    <button class="record-btn" id="recordBtn">
+                        <i class="fas fa-microphone"></i>
+                        Record your response
+                    </button>
+                    <div class="recording-controls" id="recordingControls" style="display: none;">
+                        <div class="recording-indicator">
+                            <span class="rec-dot"></span>
+                            <span>Recording...</span>
+                            <span id="recTime">00:00</span>
+                        </div>
+                        <button class="stop-btn" id="stopBtn">
+                            <i class="fas fa-stop"></i>
+                            Stop
+                        </button>
+                    </div>
+                    <button class="text-btn" id="textBtn">
+                        <i class="fas fa-pencil-alt"></i>
+                        Type your response
+                    </button>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Bottom Bar -->
+        <footer class="bottom-bar">
+            <div class="bar-stats">
+                <div class="stat">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Questions (<span id="questionsCount">10</span>)</span>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Responses (<span id="responsesCount">0</span>)</span>
+                </div>
+            </div>
+            <div class="bar-actions">
+                <button class="submit-btn" id="submitBtn" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                    Submit
+                </button>
+                <button class="disconnect-btn" id="disconnectBtn">
+                    <i class="fas fa-phone-slash"></i>
+                    Disconnect
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Text Response Modal -->
+    <div class="modal" id="textModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Type your response</h3>
+                <button class="close-modal" id="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <textarea id="textAnswer" placeholder="Type your answer here..."></textarea>
+            <div class="modal-footer">
+                <button class="cancel-btn" id="cancelText">Cancel</button>
+                <button class="submit-text-btn" id="submitText">
+                    <i class="fas fa-paper-plane"></i>
+                    Submit Answer
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Questions List Sidebar -->
+    <div class="questions-sidebar" id="questionsSidebar">
+        <div class="qs-header">
+            <h3>Questions</h3>
+            <button class="close-qs" id="closeQs">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="qs-list" id="qsList">
+            <!-- Questions will be populated by JS -->
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
