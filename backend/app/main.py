@@ -770,6 +770,14 @@ async def send_question(sid, data):
         "from": sid,
     }, room=room_id)
 
+@sio.event
+async def end_interview(sid, data):
+    room_id = data.get("interview_id")
+    if room_id:
+        await sio.emit("end_interview", {
+            "message": "The interview has been concluded by the admin."
+        }, room=room_id, skip_sid=sid)
+
 
 @sio.event
 async def submit_answer(sid, data):
@@ -846,13 +854,22 @@ async def _issue_proctor_warning(sid: str, violations_desc: str, increment: bool
     if auto_terminate is None:
         auto_terminate = GLOBAL_SETTINGS.get("auto_terminate", True)
 
-    if not auto_terminate:
+    # Force autoTerminate=False if isLiveMode / interviewer is present
+    is_live_mode = False
+    if interview_id:
+        iv_data = db.get_interview(interview_id)
+        if iv_data and iv_data.get("is_ai_interview") == 0:
+            is_live_mode = True
+
+    if not auto_terminate or is_live_mode:
         # Update cooldown even for generic warnings to prevent spam
         session["last_warning_time"] = current_time
         # Informational only, no counting, generic message (no numbers)
+        # We still show the actual violation description in Live mode if they want it
+        warning_msg = f"Suspicious activity detected: {violations_desc}. Please follow the interview rules." if is_live_mode else "Suspicious activity detected. Please follow the interview rules."
         await sio.emit("proctoring_event", {
             "type": "WARNING",
-            "message": "Suspicious activity detected. Please follow the interview rules."
+            "message": warning_msg
         }, to=sid)
         return
 

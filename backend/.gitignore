@@ -1,6 +1,33 @@
-node_modules/
-frontend/node_modules/
-backend/uploads/
-.env
-.next/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
 dist/
+build/
+*.egg
+.Python
+*.so
+
+# Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads
+uploads/photos/*
+uploads/recordings/*
+uploads/resumes/*
+!uploads/photos/.gitkeep
+!uploads/recordings/.gitkeep
+!uploads/resumes/.gitkeep

@@ -163,6 +163,9 @@ export default function Home() {
             </div>
             <p className="footer-text">AI-Powered Interview Platform for Global Hiring</p>
           </div>
+          <div className="copyright">
+            &copy; 2026 Blue Planet InfoSolutions. All rights reserved.
+          </div>
         </footer>
       </div>
 
@@ -585,6 +588,16 @@ export default function Home() {
           color: rgba(255, 255, 255, 0.5);
           font-size: 14px;
           margin: 0;
+        }
+
+        .copyright {
+          text-align: center;
+          margin-top: 40px;
+          padding-top: 24px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 13px;
+          letter-spacing: 0.02em;
         }
 
         @media (max-width: 768px) {

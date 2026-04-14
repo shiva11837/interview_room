@@ -951,6 +951,16 @@ export default function Dashboard() {
     }
   };
 
+  const handleProfileFieldChangeOrSave = (field, value) => {
+    if (field === '_save') {
+      handleProfileSave();
+    } else if (field === '_skillsInput') {
+      setProfileSkillsInput(value);
+    } else {
+      setProfile(prev => ({ ...prev, [field]: value }));
+    }
+  };
+
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1355,6 +1365,158 @@ export default function Dashboard() {
     }
   };
 
+  const handleDirectDecision = async (decision, ev, targetAppId) => {
+    let appId = targetAppId;
+    
+    if (!appId) {
+      const matchedRole = rolesList.find(r => (r.title || '').toLowerCase() === (ev.role_title || '').toLowerCase());
+      if (matchedRole) {
+        try {
+          const res = await applicationsAPI.apply({ candidate_id: ev.candidate_id, role_id: matchedRole.id });
+          appId = res.data.id;
+        } catch (e) {
+          showToast('Failed to link candidate application.');
+          return;
+        }
+      } else {
+        showToast('Role no longer exists, impossible to make decision.');
+        return;
+      }
+    }
+    
+    setProgressConfirmModal({
+      action: decision,
+      appId: appId,
+      candidateName: ev.candidate_name || 'Candidate',
+      roleTitle: ev.role_title
+    });
+  };
+
+  const renderPremiumQACard = (ans, idx, questions) => {
+    let question = questions.find(q => q.id === ans.question_id);
+    if (!question && idx < questions.length) {
+      question = questions[idx];
+    }
+    const category = question ? (question.category || 'General') : 'General';
+    const scoreNum = Math.round(ans.score || 0);
+
+    let scoreColor = '#10B981';
+    let scoreBg = '#ECFDF5';
+    let scoreLabel = 'Excellent';
+    if (scoreNum < 70) { scoreColor = '#F59E0B'; scoreBg = '#FFFBEB'; scoreLabel = 'Average'; }
+    if (scoreNum < 40) { scoreColor = '#EF4444'; scoreBg = '#FEF2F2'; scoreLabel = 'Needs Work'; }
+
+    return (
+      <div key={ans.id || idx} style={{
+        background: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '20px',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+      }} onMouseOver={e => e.currentTarget.style.boxShadow = '0 12px 24px rgba(15, 23, 42, 0.06)'} onMouseOut={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(15, 23, 42, 0.03)'}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <span style={{
+              background: 'linear-gradient(135deg, #00A3E0, #0284C7)',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 800,
+              padding: '4px 12px',
+              borderRadius: '20px',
+              letterSpacing: '0.5px'
+            }}>Q{idx + 1}</span>
+            <span style={{ color: '#64748B', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {category}
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: scoreBg,
+            color: scoreColor,
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontWeight: 700,
+            border: `1px solid ${scoreColor}33`
+          }}>
+            <span>Score: {scoreNum}%</span>
+            <span style={{ fontSize: '12px', opacity: 0.8, fontWeight: 500 }}>• {scoreLabel}</span>
+          </div>
+        </div>
+
+        <h4 style={{ fontSize: '17px', color: '#0F172A', fontWeight: 700, margin: '0 0 20px 0', lineHeight: 1.4 }}>
+          {question ? question.text : 'Question text not available'}
+        </h4>
+
+        <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '16px', marginBottom: '16px', borderLeft: '4px solid #CBD5E1' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>
+            Candidate's Answer
+          </span>
+          <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: 1.7 }}>
+            {ans.text || <span style={{ fontStyle: 'italic', color: '#94A3B8' }}>No answer provided.</span>}
+          </p>
+        </div>
+
+        {ans.feedback && (
+          <div style={{ background: 'linear-gradient(to right, #F0F9FF, #FFFFFF)', borderRadius: '12px', padding: '16px', border: '1px solid #E0F2FE' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284C7" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0284C7', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Review</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '13px', color: '#0F172A', lineHeight: 1.6, fontWeight: 500 }}>
+              {ans.feedback}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderDecisionActions = (ev, appStatus, targetAppId) => {
+    if (appStatus === 'Accepted' || appStatus === 'Selected') {
+      return (
+        <div style={{ background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)', color: '#059669', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, border: '1px solid #A7F3D0', marginTop: '24px' }}>
+          <div style={{ background: '#10B981', color: '#FFF', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>
+          Candidate Selected for this Role
+        </div>
+      );
+    }
+    if (appStatus === 'Rejected') {
+      return (
+        <div style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', color: '#DC2626', padding: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600, border: '1px solid #FECACA', marginTop: '24px' }}>
+          <div style={{ background: '#EF4444', color: '#FFF', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</div>
+          Candidate Rejected for this Role
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', gap: '16px', marginTop: '28px', paddingTop: '28px', borderTop: '1px solid #E2E8F0', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+         <span style={{ flex: '1 1 100%', fontSize: '14px', color: '#64748B', fontWeight: 500, '@media (minWidth: 600px)': { flex: 1} }}>Make a final decision for this candidate:</span>
+         <button
+            onClick={() => handleDirectDecision('Rejected', ev, targetAppId)}
+            style={{ padding: '12px 24px', background: '#FFFFFF', color: '#DC2626', border: '1.5px solid #FECACA', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(220, 38, 38, 0.05)' }}
+            onMouseOver={e => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.borderColor = '#FCA5A5'; }}
+            onMouseOut={e => { e.currentTarget.style.background = '#FFFFFF'; e.currentTarget.style.borderColor = '#FECACA'; }}
+         >
+           Reject Candidate
+         </button>
+         <button
+            onClick={() => handleDirectDecision('Selected', ev, targetAppId)}
+            style={{ padding: '12px 24px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }}
+            onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.3)'; }}
+            onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)'; }}
+         >
+           Accept for Role
+         </button>
+      </div>
+    );
+  };
+
   const renderEvaluation = () => {
     const completedInterviews = interviews
       .filter(iv => iv.status === 'Completed')
@@ -1379,7 +1541,18 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className={s.evalList}>
-            {completedInterviews.map((ev) => (
+            {completedInterviews.map((ev) => {
+              let app = applications.find(a =>
+                a.candidate_id === ev.candidate_id &&
+                (a.role_title || '').toLowerCase() === (ev.role_title || '').toLowerCase()
+              );
+              if (!app) {
+                const candApps = applications.filter(a => a.candidate_id === ev.candidate_id);
+                if (candApps.length === 1) app = candApps[0];
+              }
+              const isReviewed = app && (app.status === 'Accepted' || app.status === 'Selected' || app.status === 'Rejected');
+
+              return (
               <div className={s.evalCard} key={ev.id} id={`eval-card-${ev.id}`}>
                 <div className={s.evalTop}>
                   <div className={s.evalAvatar}>
@@ -1401,15 +1574,24 @@ export default function Dashboard() {
                   )}
                 </div>
                 <div className={s.evalActions}>
-                  <span style={{ fontSize: '13px', color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                    Completed
-                  </span>
+                  {isReviewed ? (
+                    <span style={{ fontSize: '13px', color: app.status === 'Rejected' ? '#DC2626' : '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        {app.status === 'Rejected' ? <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></> : <polyline points="20 6 9 17 4 12" />}
+                      </svg>
+                      {app.status === 'Rejected' ? 'Rejected' : 'Selected'}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '13px', color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                      Completed
+                    </span>
+                  )}
                   <button
                     className={s.viewAnswersBtn}
                     onClick={() => toggleEvalExpanded(ev.id)}
                   >
-                    {evalExpanded === ev.id ? 'Hide Responses' : 'Review Responses'}
+                    {evalExpanded === ev.id ? 'Hide Responses' : (isReviewed ? 'Reviewed' : 'Review Responses')}
                   </button>
                 </div>
 
@@ -1438,35 +1620,9 @@ export default function Dashboard() {
                         })()}
 
                         {/* Per-question review items - matching candidate progress layout */}
-                        {evalAnswers[ev.id].map((ans, idx) => {
-                          const questions = evalQuestions[ev.id] || [];
-                          let question = questions.find(q => q.id === ans.question_id);
-                          if (!question && idx < questions.length) {
-                            question = questions[idx];
-                          }
-                          const category = question ? (question.category || 'General') : 'General';
-
-                          return (
-                            <div className={s.reviewItem} key={ans.id || idx}>
-                              <div className={s.reviewQuestionRow}>
-                                <span className={s.reviewQNum}>Q{idx + 1}</span>
-                                <span className={s.reviewCategory}>{category}</span>
-                                <span className={s.reviewScore} style={{ color: (ans.score || 0) >= 70 ? '#059669' : (ans.score || 0) >= 40 ? '#D97706' : '#DC2626' }}>{Math.round(ans.score || 0)}%</span>
-                              </div>
-                              <p className={s.reviewQuestionText}>{question ? question.text : 'Question text not available'}</p>
-                              <div className={s.reviewAnswerBlock}>
-                                <span className={s.reviewAnswerLabel}>Candidate's Answer</span>
-                                <p className={s.reviewAnswerText}>{ans.text || 'No answer provided.'}</p>
-                              </div>
-                              {ans.feedback && (
-                                <div className={s.reviewFeedback}>
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00A3E0" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10" /></svg>
-                                  <span>AI Feedback: {ans.feedback}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                        {evalAnswers[ev.id].map((ans, idx) => (
+                           renderPremiumQACard(ans, idx, evalQuestions[ev.id] || [])
+                        ))}
 
                         {/* AI Evaluation Summary */}
                         {(() => {
@@ -1506,78 +1662,13 @@ export default function Dashboard() {
                       </>
                     )}
 
-                    {/* Determine active application for Accept/Reject buttons */}
-                    {(() => {
-                      let app = applications.find(a =>
-                        a.candidate_id === ev.candidate_id &&
-                        (a.role_title || '').toLowerCase() === (ev.role_title || '').toLowerCase()
-                      );
-
-                      // Fallback: If candidate only has one application, use that one.
-                      if (!app) {
-                        const candApps = applications.filter(a => a.candidate_id === ev.candidate_id);
-                        if (candApps.length === 1) app = candApps[0];
-                      }
-
-                      if (!app) {
-                        return (
-                          <div className={s.evalDecisionBadge} style={{ background: '#F1F5F9', color: '#64748B', border: '1px solid #E2E8F0', fontSize: '12px' }}>
-                            Could not link response to an active application.
-                          </div>
-                        );
-                      }
-
-                      if (app.status === 'Accepted' || app.status === 'Selected') {
-                        return (
-                          <div className={s.evalDecisionBadge} style={{ background: '#E8F5E9', color: '#2E7D32', border: '1px solid #A5D6A7' }}>
-                            ✅ Candidate Selected for this Role
-                          </div>
-                        );
-                      }
-
-                      if (app.status === 'Rejected') {
-                        return (
-                          <div className={s.evalDecisionBadge} style={{ background: '#FFEBEE', color: '#C62828', border: '1px solid #EF9A9A' }}>
-                            ❌ Candidate Rejected for this Role
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className={s.evalDecisionActions}>
-                          <button
-                            className={s.acceptCandBtn}
-                            onClick={() => {
-                              setProgressConfirmModal({
-                                action: 'Selected',
-                                appId: app.id,
-                                candidateName: ev.candidate_name || 'Candidate',
-                                roleTitle: ev.role_title
-                              });
-                            }}
-                          >
-                            Select Candidate
-                          </button>
-                          <button
-                            className={s.rejectCandBtn}
-                            onClick={() => {
-                              setProgressConfirmModal({
-                                action: 'Rejected',
-                                appId: app.id,
-                                candidateName: ev.candidate_name || 'Candidate',
-                                roleTitle: ev.role_title
-                              });
-                            }}
-                          >
-                            Reject Candidate
-                          </button>
-                        </div>
-                      );
-                    })()}
+                    {/* Admin Decision Actions */}
+                    {renderDecisionActions(ev, app ? app.status : null, app ? app.id : null)}
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -2345,35 +2436,9 @@ export default function Dashboard() {
                     })()}
 
                     {/* Per-question review items */}
-                    {evalAnswers[candInterview.id].map((ans, idx) => {
-                      const questions = evalQuestions[candInterview.id] || [];
-                      let question = questions.find(q => q.id === ans.question_id);
-                      if (!question && idx < questions.length) {
-                        question = questions[idx];
-                      }
-                      const category = question ? (question.category || 'General') : 'General';
-
-                      return (
-                        <div className={s.reviewItem} key={ans.id || idx}>
-                          <div className={s.reviewQuestionRow}>
-                            <span className={s.reviewQNum}>Q{idx + 1}</span>
-                            <span className={s.reviewCategory}>{category}</span>
-                            <span className={s.reviewScore} style={{ color: (ans.score || 0) >= 70 ? '#059669' : (ans.score || 0) >= 40 ? '#D97706' : '#DC2626' }}>{Math.round(ans.score || 0)}%</span>
-                          </div>
-                          <p className={s.reviewQuestionText}>{question ? question.text : 'Question text not available'}</p>
-                          <div className={s.reviewAnswerBlock}>
-                            <span className={s.reviewAnswerLabel}>Candidate's Answer</span>
-                            <p className={s.reviewAnswerText}>{ans.text || 'No answer provided.'}</p>
-                          </div>
-                          {ans.feedback && (
-                            <div className={s.reviewFeedback}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00A3E0" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10" /></svg>
-                              <span>AI Feedback: {ans.feedback}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {evalAnswers[candInterview.id].map((ans, idx) => (
+                       renderPremiumQACard(ans, idx, evalQuestions[candInterview.id] || [])
+                    ))}
                   </>
                 )}
               </div>
@@ -2381,40 +2446,7 @@ export default function Dashboard() {
           </div>
 
           {/* Admin Decision Actions */}
-          {app.status === 'Pending' || app.status === 'Approved' ? (
-            <div className={s.evalDecisionActions} style={{ background: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', marginTop: '16px', justifyContent: 'flex-start' }}>
-              <button
-                className={s.acceptCandBtn}
-                onClick={() => {
-                  setProgressConfirmModal({
-                    action: 'Selected',
-                    appId: app.id,
-                    candidateName: app.candidate_name || 'Candidate',
-                    roleTitle: app.role_title
-                  });
-                }}
-              >
-                Select Candidate
-              </button>
-              <button
-                className={s.rejectCandBtn}
-                onClick={() => {
-                  setProgressConfirmModal({
-                    action: 'Rejected',
-                    appId: app.id,
-                    candidateName: app.candidate_name || 'Candidate',
-                    roleTitle: app.role_title
-                  });
-                }}
-              >
-                Reject Candidate
-              </button>
-            </div>
-          ) : (
-            <div style={{ marginTop: '24px', padding: '16px 20px', borderRadius: '8px', border: app.status === 'Selected' ? '1px solid #A5D6A7' : '1px solid #EF9A9A', background: app.status === 'Selected' ? '#E8F5E9' : '#FFEBEE', color: app.status === 'Selected' ? '#2E7D32' : '#C62828', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px' }}>
-              {app.status === 'Selected' ? '✅ Candidate has been Selected for this role.' : '❌ Candidate has been Rejected for this role.'}
-            </div>
-          )}
+          {renderDecisionActions({ candidate_name: app.candidate_name, candidate_id: app.candidate_id, role_title: app.role_title }, app.status, app.id)}
         </div>
       </div>
     );
@@ -2768,6 +2800,11 @@ export default function Dashboard() {
           userName={profile?.full_name || 'User'}
           notifications={unreadNotifications}
           onNotificationsOpened={handleNotificationsOpened}
+          profileData={{ ...profile, _skillsInput: profileSkillsInput }}
+          onProfileSave={handleProfileFieldChangeOrSave}
+          onResumeUpload={handleResumeUpload}
+          onPhotoUpload={handlePhotoUpload}
+          profileMsg={profileMsg}
         />
 
         <main className={s.dashMain}>

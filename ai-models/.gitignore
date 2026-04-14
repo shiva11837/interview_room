@@ -1,0 +1,22 @@
+# Model weights
+*.pt
+*.pth
+*.weights
+*.h5
+*.bin
+*.model
+*.onnx
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Data
+datasets/
+data/
+*.csv
+*.jsonl
+
+# Logs
+runs/
+logs/
